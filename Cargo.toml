@@ -13,3 +13,5 @@ actix-rt = "^1.1.1"
 # GraphQL
 async-graphql = "^1.10.12"
 async-graphql-actix-web = "^1.2.12"
+# Typed URLs
+url = "2.1.1"
