@@ -1,5 +1,7 @@
 mod graphql;
-use graphql::coffee::{CoffeeSchema, QueryRoot};
+// mod models;
+
+use crate::graphql::coffee::{CoffeeSchema, QueryRoot};
 
 use actix_web::{guard, web, App, HttpResponse, HttpServer, Result};
 use async_graphql::http::{playground_source, GQLResponse};

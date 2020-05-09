@@ -18,16 +18,14 @@ pub struct QueryRoot;
 #[async_graphql::Object]
 impl QueryRoot {
     async fn coffees(&self, _ctx: &Context<'_>) -> Vec<Coffee> {
-        let coffees = vec![Coffee {
+        vec![Coffee {
             id: ID::from("0"),
             name: String::from("test"),
             price: 0.5,
             image_url: Url::parse("https://media.salon.com/2015/09/shutterstock_314135024.jpg")
                 .unwrap(),
             description: None,
-        }];
-
-        coffees
+        }]
     }
 
     async fn coffee(&self, _ctx: &Context<'_>, id: String) -> Coffee {
