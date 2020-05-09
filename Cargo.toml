@@ -7,3 +7,9 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+# Actix
+actix-web = "^2.0.0"
+actix-rt = "^1.1.1"
+# GraphQL
+async-graphql = "^1.10.12"
+async-graphql-actix-web = "^1.2.12"
