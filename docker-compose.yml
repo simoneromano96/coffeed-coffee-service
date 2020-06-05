@@ -1,0 +1,38 @@
+version: "3.6"
+
+services:
+  database:
+    image: mongo
+    restart: unless-stopped
+    ports:
+      - 27017:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+
+  mongo-express:
+    image: mongo-express
+    restart: always
+    ports:
+      - 8081:8081
+    environment:
+      ME_CONFIG_MONGODB_SERVER: database
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: example
+#     image: postgres:alpine
+#     environment:
+#       POSTGRES_USER: coffeed
+#       POSTGRES_PASSWORD: coffeed
+#       POSTGRES_DB: coffees
+#     ports:
+#       - 5432:5432
+#     volumes:
+#       - postgres_data:/var/lib/postgresql/data
+#
+#   adminer:
+#     image: adminer
+#     ports:
+#       - 8080:8080
+#
+#volumes:
+#   postgres_data:

@@ -1,12 +1,15 @@
 mod graphql;
 // mod models;
 
-use crate::graphql::coffee::{CoffeeSchema, QueryRoot};
+use crate::graphql::coffee::{CoffeeSchema, MutationRoot, QueryRoot};
 
 use actix_web::{guard, web, App, HttpResponse, HttpServer, Result};
-use async_graphql::http::{playground_source, GQLResponse};
-use async_graphql::{EmptyMutation, EmptySubscription, Schema};
+use async_graphql::{
+    http::{playground_source, GQLResponse},
+    EmptySubscription, Schema,
+};
 use async_graphql_actix_web::GQLRequest;
+// use std::sync::Arc;
 
 async fn index(schema: web::Data<CoffeeSchema>, gql_request: GQLRequest) -> web::Json<GQLResponse> {
     web::Json(GQLResponse(gql_request.into_inner().execute(&schema).await))
@@ -20,7 +23,14 @@ async fn index_playground() -> Result<HttpResponse> {
 
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
-    let schema = Schema::build(QueryRoot, EmptyMutation, EmptySubscription).finish();
+    // Connect to the database.
+    // let client = Arc::new(lucid_client::LucidKVClient::new(None));
+    use mongodb::Client;
+    let client: Client = Client::with_uri_str("mongodb://root:example@localhost:27017/admin").await.unwrap();
+
+    let schema = Schema::build(QueryRoot, MutationRoot, EmptySubscription)
+        .data(client)
+        .finish();
 
     println!("Playground: http://localhost:8000");
 
