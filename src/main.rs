@@ -1,3 +1,5 @@
+#![feature(associated_type_bounds)]
+
 mod graphql;
 // mod models;
 
