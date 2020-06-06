@@ -7,6 +7,7 @@ use bson::doc;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use url::Url;
 use futures::stream::StreamExt;
+use crate::models::BaseResponse;
 
 pub type CoffeeSchema = Schema<QueryRoot, MutationRoot, EmptySubscription>;
 
@@ -93,14 +94,20 @@ impl QueryRoot {
         coffees
     }
 
-    async fn coffee(&self, ctx: &Context<'_>, id: String) -> Coffee {
+    async fn coffee(&self, ctx: &Context<'_>, id: String) -> BaseResponse {
         let client: &Client = ctx.data();
         let db = client.database("coffees");
         let coffees_collection: Collection = db.collection("Coffee");
 
-        let coffee: bson::Document = coffees_collection.find_one( doc! { "_id": &id }, None ).await.unwrap().unwrap();
+        let response: BaseResponse;
 
-        Coffee::from_document(coffee)
+        if let Some(coffee) = coffees_collection.find_one( doc! { "_id": &id }, None ).await.unwrap() {
+            response = BaseResponse::with_success(Some(Coffee::from_document(coffee)));
+        } else {
+            response = BaseResponse::with_error(Some(String::from("No coffee found")));
+        }
+
+        response
     }
 }
 

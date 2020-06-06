@@ -1,36 +1,33 @@
-/* TODO
 use async_graphql::{OutputValueType, Type};
 use chrono::{DateTime, Utc};
 use crate::graphql::coffee::Coffee;
 
-pub struct BaseResponse<T: Type> {
+#[async_graphql::SimpleObject]
+pub struct BaseResponse {
     error: bool,
     // No timezone, all datetimes are with UTC time
     timestamp: DateTime<Utc>,
     message: Option<String>,
-    data: Option<T>,
+    data: Option<Coffee>,
 }
 
-impl<T> BaseResponse<T>
-where
-    T: Type,
+impl BaseResponse
 {
-    pub fn new_success(message: Option<String>, data: Option<T>) -> Self {
+    pub fn with_success(data: Option<Coffee>) -> Self {
         Self {
             error: false,
             timestamp: Utc::now(),
-            message,
+            message: None,
             data,
         }
     }
 
-    pub fn error(message: Option<String>, data: Option<T>) -> Self {
+    pub fn with_error(message: Option<String>) -> Self {
         Self {
             error: true,
             timestamp: Utc::now(),
             message,
-            data,
+            data: None,
         }
     }
 }
-*/

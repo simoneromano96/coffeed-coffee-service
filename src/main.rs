@@ -1,7 +1,7 @@
 #![feature(associated_type_bounds)]
 
 mod graphql;
-// mod models;
+mod models;
 
 use crate::graphql::coffee::{CoffeeSchema, MutationRoot, QueryRoot};
 
