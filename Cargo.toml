@@ -24,7 +24,7 @@ serde = { version = "^1.0.111", features = ["derive"] }
 # postgres = "0.17.3"
 # wither = "0.8.0"
 mongodb = "^1.0.0"
-bson = "^0.15.0"
+bson = "^1.0.0"
 futures = "^0.3.5"
 # Unique ID generator
 nanoid = "^0.3.0"
