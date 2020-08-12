@@ -13,7 +13,7 @@ actix-rt = "^1.1.1"
 # GraphQL
 async-graphql = "^1.17.7"
 async-graphql-actix-web = "^1.17.3"
-# URLs
+# Type-Safe URLs
 url = "^2.1.1"
 # DateTime and Timezone
 chrono = "^0.4.13"
@@ -25,6 +25,9 @@ serde = { version = "^1.0.115", features = ["derive"] }
 wither = "0.9.0-alpha.1"
 mongodb = "^1.0.0"
 # bson = "^1.0.0"
-futures = "^0.3.5"
+# Needed for the subscriptions (this is already a dependency of actix)
+# tokio = "0.2.6"
+# Needed for some traits
+futures = "0.3.5"
 # Unique ID generator
 # nanoid = "^0.3.0"
