@@ -5,17 +5,20 @@ use wither::bson::{doc, oid::ObjectId};
 use url::Url;
 use wither::prelude::*;
 
-// Define a model. Simple as deriving a few traits.
+/// Define the Coffee Model
 #[derive(Clone, Debug, Model, Serialize, Deserialize)]
 #[model(index(keys = r#"doc!{"name": 1}"#, options = r#"doc!{"unique": true}"#))]
 pub struct Coffee {
     /// The ID of the model.
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
-    /// The coffee's name.
+    /// Coffee's name.
     pub name: String,
+    /// Coffee's price.
     pub price: f64,
+    /// Coffee's image.
     pub image_url: String,
+    /// Coffee's description (optional).
     pub description: Option<String>,
 }
 

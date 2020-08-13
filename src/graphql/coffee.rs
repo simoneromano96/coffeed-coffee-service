@@ -140,12 +140,18 @@ async fn delete_coffee(client: &Client, id: String) -> FieldResult<Coffee> {
 
 #[async_graphql::Object]
 impl QueryRoot {
+    /// Returns an array with all the coffees or an empty array
     async fn coffees(&self, ctx: &Context<'_>) -> FieldResult<Vec<Coffee>> {
         let client: &Client = ctx.data()?;
         fetch_all_coffees(client).await
     }
 
-    async fn coffee(&self, ctx: &Context<'_>, id: String) -> FieldResult<Coffee> {
+    /// Returns a coffee by its ID, will return error if none is present with the given ID
+    async fn coffee(
+        &self,
+        ctx: &Context<'_>,
+        #[arg(desc = "ID of the coffee.")] id: String,
+    ) -> FieldResult<Coffee> {
         let client: &Client = ctx.data()?;
         fetch_coffee_by_id(client, id).await
     }
@@ -155,24 +161,27 @@ pub struct MutationRoot;
 
 #[async_graphql::Object]
 impl MutationRoot {
+    /// Creates a new coffee
     async fn create_coffee(
         &self,
         ctx: &Context<'_>,
-        input: CreateCoffeeInput,
+        #[arg(desc = "The parameters of the new coffee.")] input: CreateCoffeeInput,
     ) -> FieldResult<Coffee> {
         let client: &Client = ctx.data()?;
         create_coffee(client, input).await
     }
 
+    /// Updates a coffee
     async fn update_coffee(
         &self,
         ctx: &Context<'_>,
-        input: UpdateCoffeeInput,
+        #[arg(desc = "The parameters of the updated coffee, must have ID.")] input: UpdateCoffeeInput,
     ) -> FieldResult<Coffee> {
         let client: &Client = ctx.data()?;
         update_coffee(client, input).await
     }
 
+    /// Deletes a coffeee
     async fn delete_coffee(&self, ctx: &Context<'_>, id: String) -> FieldResult<Coffee> {
         let client: &Client = ctx.data()?;
         delete_coffee(client, id).await

@@ -34,15 +34,15 @@ async fn index_ws(
 }
 
 async fn init() -> wither::mongodb::Client {
+    // use models::Coffee;
+    use wither::mongodb::Client;
     // Connect to the database.
     // let client = Arc::new(lucid_client::LucidKVClient::new(None));
-    use wither::mongodb::Client;
-    // use models::CoffeeModel;
     let client: Client = Client::with_uri_str("mongodb://root:example@localhost:27017/admin")
         .await
         .unwrap();
 
-    // CoffeeModel::sync(client.clone()).await?;
+    // Coffee::sync(client.clone()).await.unwrap();
 
     client
 }
