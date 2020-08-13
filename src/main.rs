@@ -11,6 +11,7 @@ use async_graphql::{
     Schema,
 };
 use async_graphql_actix_web::{GQLRequest, GQLResponse, WSSubscription};
+use mongodb::bson::doc;
 // use std::sync::Arc;
 
 async fn index(schema: web::Data<CoffeeSchema>, req: GQLRequest) -> GQLResponse {
@@ -33,7 +34,7 @@ async fn index_ws(
     ws::start_with_protocols(WSSubscription::new(&schema), &["graphql-ws"], &req, payload)
 }
 
-async fn init() -> wither::mongodb::Client {
+async fn init() -> wither::mongodb::Database {
     // use models::Coffee;
     use wither::mongodb::Client;
     // Connect to the database.
@@ -44,15 +45,33 @@ async fn init() -> wither::mongodb::Client {
 
     // Coffee::sync(client.clone()).await.unwrap();
 
-    client
+    let db = client.database("coffees");
+    db.run_command(
+        doc! {
+            "createIndexes": "coffees",
+            "indexes": [
+                {
+                "key": {
+                    "name": 1,
+                },
+                "name": "nameIndex",
+                "unique": true,
+                },
+            ],
+        },
+        None,
+    )
+    .await.unwrap();
+
+    db
 }
 
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
-    let client = init().await;
+    let db = init().await;
 
     let schema = Schema::build(QueryRoot, MutationRoot, SubscriptionRoot)
-        .data(client)
+        .data(db)
         .finish();
 
     println!("Playground: http://localhost:8000");

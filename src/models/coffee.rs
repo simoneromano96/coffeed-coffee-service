@@ -7,7 +7,7 @@ use wither::prelude::*;
 
 /// Define the Coffee Model
 #[derive(Clone, Debug, Model, Serialize, Deserialize)]
-#[model(index(keys = r#"doc!{"name": 1}"#, options = r#"doc!{"unique": true}"#))]
+#[model(collection_name = "coffees", index(keys = r#"doc!{"name": 1}"#, options = r#"doc!{"unique": true}"#))]
 pub struct Coffee {
     /// The ID of the model.
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]

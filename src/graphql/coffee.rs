@@ -1,7 +1,7 @@
 use async_graphql::{Context, FieldError, FieldResult, Schema, SimpleBroker, ID};
 // use nanoid::nanoid;
 // use serde::ser::SerializeStruct;
-use mongodb::Client;
+use mongodb::Database;
 // use bson::doc;
 use crate::models::{Coffee, CreateCoffeeInput, UpdateCoffeeInput};
 use futures::{Stream, StreamExt};
@@ -12,8 +12,7 @@ pub type CoffeeSchema = Schema<QueryRoot, MutationRoot, SubscriptionRoot>;
 
 pub struct QueryRoot;
 
-async fn fetch_all_coffees(client: &Client) -> FieldResult<Vec<Coffee>> {
-    let db = client.database("coffees");
+async fn fetch_all_coffees(db: &Database) -> FieldResult<Vec<Coffee>> {
     let mut coffees: Vec<Coffee> = Vec::new();
 
     let mut cursor = Coffee::find(db.clone(), None, None).await?;
@@ -25,9 +24,7 @@ async fn fetch_all_coffees(client: &Client) -> FieldResult<Vec<Coffee>> {
     Ok(coffees)
 }
 
-async fn fetch_coffee_by_id(client: &Client, id: String) -> FieldResult<Coffee> {
-    let db = client.database("coffees");
-
+async fn fetch_coffee_by_id(db: &Database, id: String) -> FieldResult<Coffee> {
     let query = doc! {
         "_id": ObjectId::with_string(&id)?,
     };
@@ -42,8 +39,7 @@ async fn fetch_coffee_by_id(client: &Client, id: String) -> FieldResult<Coffee> 
     }
 }
 
-async fn create_coffee(client: &Client, input: CreateCoffeeInput) -> FieldResult<Coffee> {
-    let db = client.database("coffees");
+async fn create_coffee(db: &Database, input: CreateCoffeeInput) -> FieldResult<Coffee> {
     let mut coffee = Coffee {
         id: None,
         name: input.name,
@@ -62,11 +58,9 @@ async fn create_coffee(client: &Client, input: CreateCoffeeInput) -> FieldResult
     Ok(coffee)
 }
 
-async fn update_coffee(client: &Client, input: UpdateCoffeeInput) -> FieldResult<Coffee> {
+async fn update_coffee(db: &Database, input: UpdateCoffeeInput) -> FieldResult<Coffee> {
     use mongodb::bson::Document;
     use mongodb::options::FindOneAndUpdateOptions;
-
-    let db = client.database("coffees");
 
     let mut doc: Document = Document::new();
 
@@ -114,9 +108,7 @@ async fn update_coffee(client: &Client, input: UpdateCoffeeInput) -> FieldResult
     }
 }
 
-async fn delete_coffee(client: &Client, id: String) -> FieldResult<Coffee> {
-    let db = client.database("coffees");
-
+async fn delete_coffee(db: &Database, id: String) -> FieldResult<Coffee> {
     let query = doc! {
         "_id": ObjectId::with_string(&id)?
     };
@@ -142,8 +134,8 @@ async fn delete_coffee(client: &Client, id: String) -> FieldResult<Coffee> {
 impl QueryRoot {
     /// Returns an array with all the coffees or an empty array
     async fn coffees(&self, ctx: &Context<'_>) -> FieldResult<Vec<Coffee>> {
-        let client: &Client = ctx.data()?;
-        fetch_all_coffees(client).await
+        let db: &Database = ctx.data()?;
+        fetch_all_coffees(db).await
     }
 
     /// Returns a coffee by its ID, will return error if none is present with the given ID
@@ -152,8 +144,8 @@ impl QueryRoot {
         ctx: &Context<'_>,
         #[arg(desc = "ID of the coffee.")] id: String,
     ) -> FieldResult<Coffee> {
-        let client: &Client = ctx.data()?;
-        fetch_coffee_by_id(client, id).await
+        let db: &Database = ctx.data()?;
+        fetch_coffee_by_id(db, id).await
     }
 }
 
@@ -167,8 +159,8 @@ impl MutationRoot {
         ctx: &Context<'_>,
         #[arg(desc = "The parameters of the new coffee.")] input: CreateCoffeeInput,
     ) -> FieldResult<Coffee> {
-        let client: &Client = ctx.data()?;
-        create_coffee(client, input).await
+        let db: &Database = ctx.data()?;
+        create_coffee(db, input).await
     }
 
     /// Updates a coffee
@@ -177,14 +169,14 @@ impl MutationRoot {
         ctx: &Context<'_>,
         #[arg(desc = "The parameters of the updated coffee, must have ID.")] input: UpdateCoffeeInput,
     ) -> FieldResult<Coffee> {
-        let client: &Client = ctx.data()?;
-        update_coffee(client, input).await
+        let db: &Database = ctx.data()?;
+        update_coffee(db, input).await
     }
 
     /// Deletes a coffeee
     async fn delete_coffee(&self, ctx: &Context<'_>, id: String) -> FieldResult<Coffee> {
-        let client: &Client = ctx.data()?;
-        delete_coffee(client, id).await
+        let db: &Database = ctx.data()?;
+        delete_coffee(db, id).await
     }
 }
 
