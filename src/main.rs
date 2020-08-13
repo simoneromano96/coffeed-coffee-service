@@ -7,6 +7,7 @@ use crate::graphql::coffee::{CoffeeSchema, MutationRoot, QueryRoot, Subscription
 use actix_web::{guard, web, App, HttpRequest, HttpResponse, HttpServer, Result};
 use actix_web_actors::ws;
 use async_graphql::{
+    extensions::ApolloTracing,
     http::{playground_source, GraphQLPlaygroundConfig},
     Schema,
 };
@@ -61,7 +62,8 @@ async fn init() -> wither::mongodb::Database {
         },
         None,
     )
-    .await.unwrap();
+    .await
+    .unwrap();
 
     db
 }
@@ -71,6 +73,7 @@ async fn main() -> std::io::Result<()> {
     let db = init().await;
 
     let schema = Schema::build(QueryRoot, MutationRoot, SubscriptionRoot)
+        .extension(|| ApolloTracing::default())
         .data(db)
         .finish();
 
