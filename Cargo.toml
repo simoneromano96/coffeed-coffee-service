@@ -8,7 +8,11 @@ edition = "2018"
 
 [dependencies]
 # Actix
+# HTTP Server
 actix-web = { version = "^2.0.0", default-features = false }
+# WebSocket
+actix-web-actors = "2.0.0"
+# Runtime
 actix-rt = "^1.1.1"
 # GraphQL
 async-graphql = "^1.17.7"

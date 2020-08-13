@@ -1,20 +1,14 @@
-use async_graphql::{
-    Context, EmptyMutation, EmptySubscription, FieldError, FieldResult, Schema, ID,
-};
+use async_graphql::{Context, FieldError, FieldResult, Schema, SimpleBroker, ID};
 // use nanoid::nanoid;
 // use serde::ser::SerializeStruct;
 use mongodb::Client;
-use mongodb::Collection;
 // use bson::doc;
 use crate::models::{Coffee, CreateCoffeeInput, UpdateCoffeeInput};
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use url::Url;
-use wither::bson::{doc, oid::ObjectId};
-use wither::{prelude::*, Result};
-// use std::time::Duration;
 use futures::{Stream, StreamExt};
+use wither::bson::{doc, oid::ObjectId};
+use wither::prelude::*;
 
-pub type CoffeeSchema = Schema<QueryRoot, MutationRoot, EmptySubscription>;
+pub type CoffeeSchema = Schema<QueryRoot, MutationRoot, SubscriptionRoot>;
 
 pub struct QueryRoot;
 
@@ -22,12 +16,10 @@ async fn fetch_all_coffees(client: &Client) -> FieldResult<Vec<Coffee>> {
     let db = client.database("coffees");
     let mut coffees: Vec<Coffee> = Vec::new();
 
-    let coffee_cursor = Coffee::find(db.clone(), None, None).await;
+    let mut cursor = Coffee::find(db.clone(), None, None).await?;
 
-    if let Ok(mut cursor) = coffee_cursor {
-        while let Some(coffee) = cursor.next().await {
-            coffees.push(coffee.unwrap());
-        }
+    while let Some(coffee) = cursor.next().await {
+        coffees.push(coffee.unwrap());
     }
 
     Ok(coffees)
@@ -52,7 +44,7 @@ async fn fetch_coffee_by_id(client: &Client, id: String) -> FieldResult<Coffee> 
 
 async fn create_coffee(client: &Client, input: CreateCoffeeInput) -> FieldResult<Coffee> {
     let db = client.database("coffees");
-    let mut coffee_model = Coffee {
+    let mut coffee = Coffee {
         id: None,
         name: input.name,
         price: input.price,
@@ -60,9 +52,14 @@ async fn create_coffee(client: &Client, input: CreateCoffeeInput) -> FieldResult
         description: input.description,
     };
 
-    coffee_model.save(db.clone(), None).await?;
+    coffee.save(db.clone(), None).await?;
 
-    Ok(coffee_model)
+    SimpleBroker::publish(CoffeeChanged {
+        mutation_type: MutationType::Created,
+        id: ID::from(coffee.id.clone().unwrap().to_string()),
+    });
+
+    Ok(coffee)
 }
 
 async fn update_coffee(client: &Client, input: UpdateCoffeeInput) -> FieldResult<Coffee> {
@@ -95,19 +92,61 @@ async fn update_coffee(client: &Client, input: UpdateCoffeeInput) -> FieldResult
         doc.insert("imageUrl", image_url.into_string());
     }
 
-    let opts = FindOneAndUpdateOptions::builder().return_document(Some(mongodb::options::ReturnDocument::After)).build();
-    Ok(Coffee::find_one_and_update(db.clone(), query, doc! {"$set": doc}, Some(opts)).await?.unwrap())
+    let opts = FindOneAndUpdateOptions::builder()
+        .return_document(Some(mongodb::options::ReturnDocument::After))
+        .build();
+
+    let res: Option<Coffee> =
+        Coffee::find_one_and_update(db.clone(), query, doc! {"$set": doc}, Some(opts)).await?;
+
+    if let Some(coffee) = res {
+        SimpleBroker::publish(CoffeeChanged {
+            mutation_type: MutationType::Updated,
+            id: ID::from(coffee.id.clone().unwrap().to_string()),
+        });
+
+        Ok(coffee)
+    } else {
+        Err(FieldError(
+            format!("Coffee with ID {:?} not found", id),
+            None,
+        ))
+    }
+}
+
+async fn delete_coffee(client: &Client, id: String) -> FieldResult<Coffee> {
+    let db = client.database("coffees");
+
+    let query = doc! {
+        "_id": ObjectId::with_string(&id)?
+    };
+
+    let res: Option<Coffee> = Coffee::find_one_and_delete(db.clone(), query, None).await?;
+
+    if let Some(coffee) = res {
+        SimpleBroker::publish(CoffeeChanged {
+            mutation_type: MutationType::Deleted,
+            id: ID::from(coffee.id.clone().unwrap().to_string()),
+        });
+
+        Ok(coffee)
+    } else {
+        Err(FieldError(
+            format!("Coffee with ID {:?} not found", id),
+            None,
+        ))
+    }
 }
 
 #[async_graphql::Object]
 impl QueryRoot {
     async fn coffees(&self, ctx: &Context<'_>) -> FieldResult<Vec<Coffee>> {
-        let client: &Client = ctx.data().unwrap();
+        let client: &Client = ctx.data()?;
         fetch_all_coffees(client).await
     }
 
     async fn coffee(&self, ctx: &Context<'_>, id: String) -> FieldResult<Coffee> {
-        let client: &Client = ctx.data().unwrap();
+        let client: &Client = ctx.data()?;
         fetch_coffee_by_id(client, id).await
     }
 }
@@ -121,27 +160,35 @@ impl MutationRoot {
         ctx: &Context<'_>,
         input: CreateCoffeeInput,
     ) -> FieldResult<Coffee> {
-        let client: &Client = ctx.data().unwrap();
-
+        let client: &Client = ctx.data()?;
         create_coffee(client, input).await
     }
 
-    async fn update_coffee(&self, ctx: &Context<'_>, input: UpdateCoffeeInput) -> FieldResult<Coffee> {
-        let client: &Client = ctx.data().unwrap();
-
+    async fn update_coffee(
+        &self,
+        ctx: &Context<'_>,
+        input: UpdateCoffeeInput,
+    ) -> FieldResult<Coffee> {
+        let client: &Client = ctx.data()?;
         update_coffee(client, input).await
+    }
+
+    async fn delete_coffee(&self, ctx: &Context<'_>, id: String) -> FieldResult<Coffee> {
+        let client: &Client = ctx.data()?;
+        delete_coffee(client, id).await
     }
 }
 
-/*
 #[async_graphql::Enum]
+#[derive(Debug)]
 enum MutationType {
     Created,
-    // Deleted,
+    Updated,
+    Deleted,
 }
 
 #[async_graphql::SimpleObject]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct CoffeeChanged {
     mutation_type: MutationType,
     id: ID,
@@ -151,15 +198,10 @@ pub struct SubscriptionRoot;
 
 #[async_graphql::Subscription]
 impl SubscriptionRoot {
-    async fn interval(&self, #[arg(default = 1)] n: i32) -> impl Stream<Item = i32> {
-        let mut value = 0;
-        tokio::time::interval(Duration::from_secs(1)).map(move |_| {
-            value += n;
-            value
-        })
-    }
-
-    async fn coffees(&self, mutation_type: Option<MutationType>) -> impl Stream<Item = CoffeeChanged> {
+    async fn coffees(
+        &self,
+        mutation_type: Option<MutationType>,
+    ) -> impl Stream<Item = CoffeeChanged> {
         SimpleBroker::<CoffeeChanged>::subscribe().filter(move |event| {
             let res = if let Some(mutation_type) = mutation_type {
                 event.mutation_type == mutation_type
@@ -170,4 +212,3 @@ impl SubscriptionRoot {
         })
     }
 }
-*/

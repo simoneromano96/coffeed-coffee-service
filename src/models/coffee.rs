@@ -1,10 +1,9 @@
-use async_graphql::{Context, EmptySubscription, Schema, ID};
 // use futures::stream::StreamExt;
 use serde::{Deserialize, Serialize};
 use wither::bson::{doc, oid::ObjectId};
 // use wither::mongodb::Client;
-use wither::{prelude::*, Result};
 use url::Url;
+use wither::prelude::*;
 
 // Define a model. Simple as deriving a few traits.
 #[derive(Clone, Debug, Model, Serialize, Deserialize)]
@@ -49,27 +48,6 @@ impl Coffee {
             String::from("")
         }
     }
-
-    // pub async fn to_coffee(&self) -> Coffee {
-    //     Coffee {
-    //         id: ID::from(self.id.clone().unwrap()),
-    //         name: self.name.clone(),
-    //         price: self.price,
-    //         image_url: self.image_url.clone(),
-    //         description: self.description.clone(),
-    //     }
-    // }
-
-    //pub async fn from_coffee(coffee: Coffee) -> Self {
-    //    let id: String = coffee.id.into();
-    //    CoffeeModel {
-    //        id: Some(ObjectId::with_string(&id).unwrap()),
-    //        name: coffee.name,
-    //        price: coffee.price,
-    //        image_url: coffee.image_url,
-    //        description: coffee.description,
-    //    }
-    //}
 }
 
 #[async_graphql::InputObject]
