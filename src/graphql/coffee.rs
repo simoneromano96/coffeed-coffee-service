@@ -1,14 +1,16 @@
-use async_graphql::{Context, EmptySubscription, Schema, ID, FieldResult, EmptyMutation, FieldError};
+use async_graphql::{
+    Context, EmptyMutation, EmptySubscription, FieldError, FieldResult, Schema, ID,
+};
 // use nanoid::nanoid;
 // use serde::ser::SerializeStruct;
 use mongodb::Client;
 use mongodb::Collection;
 // use bson::doc;
+use crate::models::{Coffee, CreateCoffeeInput, UpdateCoffeeInput};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use url::Url;
-use crate::models::{Coffee, CoffeeModel};
-use wither::{prelude::*, Result};
 use wither::bson::{doc, oid::ObjectId};
+use wither::{prelude::*, Result};
 // use std::time::Duration;
 use futures::{Stream, StreamExt};
 
@@ -20,11 +22,11 @@ async fn fetch_all_coffees(client: &Client) -> FieldResult<Vec<Coffee>> {
     let db = client.database("coffees");
     let mut coffees: Vec<Coffee> = Vec::new();
 
-    let coffee_cursor = CoffeeModel::find(db.clone(), None, None).await;
-    
+    let coffee_cursor = Coffee::find(db.clone(), None, None).await;
+
     if let Ok(mut cursor) = coffee_cursor {
         while let Some(coffee) = cursor.next().await {
-            coffees.push(coffee.unwrap().to_coffee());
+            coffees.push(coffee.unwrap());
         }
     }
 
@@ -35,23 +37,66 @@ async fn fetch_coffee_by_id(client: &Client, id: String) -> FieldResult<Coffee> 
     let db = client.database("coffees");
 
     let query = doc! {
-        "_id": ObjectId::with_string(&id).unwrap(),
+        "_id": ObjectId::with_string(&id)?,
     };
 
-    if let Some(coffee_model) = CoffeeModel::find_one(db.clone(), Some(query), None).await.unwrap() {
-        Ok(coffee_model.to_coffee())
+    if let Some(coffee_model) = Coffee::find_one(db.clone(), Some(query), None).await? {
+        Ok(coffee_model)
     } else {
-        Err(FieldError(format!("Coffee with ID {:?} not found", id), None))
+        Err(FieldError(
+            format!("Coffee with ID {:?} not found", id),
+            None,
+        ))
     }
 }
 
-async fn create_coffee(client: &Client, input: CoffeeInput) -> Result<Coffee> {
+async fn create_coffee(client: &Client, input: CreateCoffeeInput) -> FieldResult<Coffee> {
     let db = client.database("coffees");
+    let mut coffee_model = Coffee {
+        id: None,
+        name: input.name,
+        price: input.price,
+        image_url: input.image_url.into_string(),
+        description: input.description,
+    };
 
-    let mut coffee_model = CoffeeModel{id: None, name: input.name, price: input.price, image_url: input.image_url.into_string(), description: input.description};
     coffee_model.save(db.clone(), None).await?;
 
-    Ok(coffee_model.to_coffee())
+    Ok(coffee_model)
+}
+
+async fn update_coffee(client: &Client, input: UpdateCoffeeInput) -> FieldResult<Coffee> {
+    use mongodb::bson::Document;
+    use mongodb::options::FindOneAndUpdateOptions;
+
+    let db = client.database("coffees");
+
+    let mut doc: Document = Document::new();
+
+    let id = input.id;
+
+    let query = doc! {
+        "_id": ObjectId::with_string(&id)?
+    };
+
+    if let Some(name) = input.name {
+        doc.insert("name", name);
+    }
+
+    if let Some(price) = input.price {
+        doc.insert("price", price);
+    }
+
+    if let Some(description) = input.description {
+        doc.insert("description", description);
+    }
+
+    if let Some(image_url) = input.image_url {
+        doc.insert("imageUrl", image_url.into_string());
+    }
+
+    let opts = FindOneAndUpdateOptions::builder().return_document(Some(mongodb::options::ReturnDocument::After)).build();
+    Ok(Coffee::find_one_and_update(db.clone(), query, doc! {"$set": doc}, Some(opts)).await?.unwrap())
 }
 
 #[async_graphql::Object]
@@ -62,28 +107,29 @@ impl QueryRoot {
     }
 
     async fn coffee(&self, ctx: &Context<'_>, id: String) -> FieldResult<Coffee> {
-        let client: &Client = ctx.data().unwrap();        
+        let client: &Client = ctx.data().unwrap();
         fetch_coffee_by_id(client, id).await
     }
-}
-
-#[async_graphql::InputObject]
-#[derive(Clone)]
-pub struct CoffeeInput {
-    pub name: String,
-    pub price: f64,
-    pub image_url: Url,
-    pub description: Option<String>,
 }
 
 pub struct MutationRoot;
 
 #[async_graphql::Object]
 impl MutationRoot {
-    async fn create_coffee(&self, ctx: &Context<'_>, input: CoffeeInput) -> Coffee {
+    async fn create_coffee(
+        &self,
+        ctx: &Context<'_>,
+        input: CreateCoffeeInput,
+    ) -> FieldResult<Coffee> {
         let client: &Client = ctx.data().unwrap();
 
-        create_coffee(client, input).await.unwrap()
+        create_coffee(client, input).await
+    }
+
+    async fn update_coffee(&self, ctx: &Context<'_>, input: UpdateCoffeeInput) -> FieldResult<Coffee> {
+        let client: &Client = ctx.data().unwrap();
+
+        update_coffee(client, input).await
     }
 }
 
