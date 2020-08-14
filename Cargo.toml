@@ -14,6 +14,8 @@ actix-web = { version = "^2.0.0", default-features = false }
 actix-web-actors = "2.0.0"
 # Runtime
 actix-rt = "^1.1.1"
+# CORS
+actix-cors = "^0.2.0"
 # GraphQL
 async-graphql = "^1.17.7"
 async-graphql-actix-web = "^1.17.3"
