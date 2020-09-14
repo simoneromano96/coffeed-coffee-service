@@ -11,7 +11,7 @@ edition = "2018"
 # HTTP Server
 actix-web = { version = "^2.0.0", default-features = false }
 # WebSocket
-actix-web-actors = "2.0.0"
+actix-web-actors = "3.0.0"
 # Runtime
 actix-rt = "^1.1.1"
 # CORS
