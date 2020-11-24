@@ -17,7 +17,7 @@ actix-rt = "^1.1.1"
 # CORS
 actix-cors = "^0.2.0"
 # GraphQL
-async-graphql = "^1.17.7"
+async-graphql = "^2.1.4"
 async-graphql-actix-web = "^1.17.3"
 # Type-Safe URLs
 url = "^2.1.1"
