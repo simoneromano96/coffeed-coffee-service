@@ -18,7 +18,7 @@ actix-rt = "^1.1.1"
 actix-cors = "^0.2.0"
 # GraphQL
 async-graphql = "^1.17.7"
-async-graphql-actix-web = "^1.17.3"
+async-graphql-actix-web = "^2.1.5"
 # Type-Safe URLs
 url = "^2.1.1"
 # DateTime and Timezone
